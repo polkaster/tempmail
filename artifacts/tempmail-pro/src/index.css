@@ -1,6 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import 'tailwindcss';
 @import 'tw-animate-css';
+
+@keyframes rgb-shift {
+  0%   { color: #ff4e4e; }
+  16%  { color: #ff9f1c; }
+  33%  { color: #ffe94e; }
+  50%  { color: #4eff91; }
+  66%  { color: #4eb8ff; }
+  83%  { color: #c44eff; }
+  100% { color: #ff4e4e; }
+}
+
+.rgb-text {
+  animation: rgb-shift 4s linear infinite;
+  filter: drop-shadow(0 0 8px currentColor);
+}
 @plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));

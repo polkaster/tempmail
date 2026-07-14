@@ -127,11 +127,16 @@ export default function Home() {
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 w-full border-b border-white/10 shadow-sm"
         style={{ background: 'rgba(0,0,0,0.10)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-        <div className="container mx-auto px-4 h-16 flex items-center justify-center">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+
+          {/* spacer kiri agar judul tetap di tengah */}
+          <div className="w-36 hidden sm:block" />
+
+          {/* Judul tengah */}
           <div className="flex flex-col items-center">
-            <h1 className="text-xl font-bold tracking-tight text-white drop-shadow flex items-center gap-2">
-              <ShieldCheck className="h-5 w-5 text-emerald-400" />
-              TempMail By Polkaster
+            <h1 className="text-xl font-bold tracking-tight drop-shadow flex items-center gap-2">
+              <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0" />
+              <span className="rgb-text">TempMail By Polkaster</span>
             </h1>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="relative flex h-2 w-2">
@@ -141,6 +146,20 @@ export default function Home() {
               <span className="text-[10px] font-medium text-white/60 uppercase tracking-wider">Live</span>
             </div>
           </div>
+
+          {/* Tombol Donate — kanan */}
+          <div className="w-36 flex justify-end">
+            <a href="https://saweria.co/polkaster" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold
+                         border border-yellow-400/50 text-yellow-300
+                         bg-yellow-400/10 hover:bg-yellow-400/25
+                         shadow-[0_0_12px_rgba(250,204,21,0.25)]
+                         hover:shadow-[0_0_20px_rgba(250,204,21,0.45)]
+                         transition-all duration-200">
+              ☕ <span>Donate</span>
+            </a>
+          </div>
+
         </div>
       </header>
 
@@ -549,15 +568,6 @@ export default function Home() {
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/>
               </svg>
               Twitter / X
-            </a>
-            <span className="text-white/20 text-xs">•</span>
-            <a href="https://saweria.co/polkaster" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-yellow-400 transition-colors duration-200">
-              {/* Coffee / donate icon */}
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M2 21h18v-2H2v2zm2-3h14l1-9H3l1 9zm13-11V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v2H3v2h2.09L6 15h12l.91-7H21V7h-4zm-2 0H9V6h6v1z"/>
-              </svg>
-              ☕ Donate buat ngopi
             </a>
           </div>
         </div>
