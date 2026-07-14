@@ -29,6 +29,7 @@ import {
   RotateCcw,
   History,
   Undo2,
+  Search,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 // @ts-ignore
@@ -38,8 +39,8 @@ import bgImage from '@assets/xxxx_1784040995668.jpg';
 function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-2xl border border-white/20 shadow-xl overflow-hidden ${className}`}
-      style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' }}
+      className={`rounded-2xl border border-white/10 shadow-2xl overflow-hidden ${className}`}
+      style={{ background: 'rgba(0,0,0,0.18)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }}
     >
       {children}
     </div>
@@ -64,11 +65,12 @@ export default function Home() {
   } = useTempMail();
 
   const { toast } = useToast();
-  const [showRecovery, setShowRecovery]     = useState(false);
-  const [selectedId,   setSelectedId]       = useState<string | null>(null);
-  const [emailDetail,  setEmailDetail]      = useState<EmailDetail | null>(null);
-  const [isDetailLoad, setIsDetailLoad]     = useState(false);
-  const [recovering,   setRecovering]       = useState<string | null>(null);
+  const [showRecovery,   setShowRecovery]   = useState(false);
+  const [recoverySearch, setRecoverySearch] = useState('');
+  const [selectedId,     setSelectedId]     = useState<string | null>(null);
+  const [emailDetail,    setEmailDetail]    = useState<EmailDetail | null>(null);
+  const [isDetailLoad,   setIsDetailLoad]   = useState(false);
+  const [recovering,     setRecovering]     = useState<string | null>(null);
 
   const handleCopy = () => {
     if (!address) return;
@@ -119,12 +121,12 @@ export default function Home() {
     <div className="min-h-[100dvh] w-full flex flex-col font-sans relative"
       style={{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
 
-      {/* global overlay */}
-      <div className="fixed inset-0 bg-black/45 pointer-events-none z-0" />
+      {/* global overlay — very light so background art shows through */}
+      <div className="fixed inset-0 bg-black/10 pointer-events-none z-0" />
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 w-full border-b border-white/10 shadow-sm"
-        style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+        style={{ background: 'rgba(0,0,0,0.10)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div className="container mx-auto px-4 h-16 flex items-center justify-center">
           <div className="flex flex-col items-center">
             <h1 className="text-xl font-bold tracking-tight text-white drop-shadow flex items-center gap-2">
@@ -307,53 +309,108 @@ export default function Home() {
 
                   {/* ── Account Recovery panel ───────────────────────────── */}
                   {showRecovery && (
-                    <motion.div key="recovery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                      {history.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-52 text-center px-4">
-                          <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center mb-3">
-                            <History className="h-6 w-6 text-white/30" />
+                    <motion.div key="recovery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                      className="flex flex-col gap-2 pt-1">
+
+                      {/* Search input */}
+                      <div className="relative px-1">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/35 pointer-events-none" />
+                        <Input
+                          value={recoverySearch}
+                          onChange={e => setRecoverySearch(e.target.value)}
+                          placeholder="Cari alamat email lama…"
+                          className="pl-8 h-9 text-sm bg-white/8 border-white/15 text-white placeholder:text-white/30
+                                     focus-visible:ring-1 focus-visible:ring-purple-400/60"
+                        />
+                      </div>
+
+                      {/* Results */}
+                      {(() => {
+                        const q = recoverySearch.trim().toLowerCase();
+                        const filtered = history.filter(r =>
+                          !q || r.email.toLowerCase().includes(q)
+                        );
+
+                        if (history.length === 0) return (
+                          <div className="flex flex-col items-center justify-center h-44 text-center px-4">
+                            <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center mb-3">
+                              <History className="h-6 w-6 text-white/30" />
+                            </div>
+                            <p className="text-sm font-medium text-white/50">Belum ada riwayat akun.</p>
+                            <p className="text-xs text-white/30 mt-1">Akun yang pernah digunakan akan muncul di sini.</p>
                           </div>
-                          <p className="text-sm font-medium text-white/50">Belum ada riwayat akun.</p>
-                          <p className="text-xs text-white/30 mt-1">Akun yang pernah digunakan akan muncul di sini.</p>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col gap-1.5 pt-1">
-                          <p className="text-xs text-white/40 px-2 pb-1">
-                            Pilih akun lama untuk memulihkannya dan mulai menerima email kembali.
-                          </p>
-                          {history.map((rec) => {
-                            const isCurrent = rec.email === address;
-                            const isRecovering = recovering === rec.email;
-                            return (
-                              <div key={rec.email}
-                                className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all ${
-                                  isCurrent
-                                    ? 'bg-teal-500/20 border-teal-400/40'
-                                    : 'bg-white/5 border-white/10 hover:bg-white/10'
-                                }`}>
-                                <div className="min-w-0 flex-1">
-                                  <p className={`text-sm font-mono truncate font-medium ${isCurrent ? 'text-teal-300' : 'text-white/85'}`}>
-                                    {rec.email}
-                                  </p>
-                                  <p className="text-[10px] text-white/35 mt-0.5">
-                                    {isCurrent ? '● Sedang aktif' : `Disimpan ${relativeTime(rec.savedAt)}`}
-                                  </p>
+                        );
+
+                        if (filtered.length === 0) return (
+                          <div className="flex flex-col items-center justify-center h-32 text-center px-4">
+                            <Search className="h-8 w-8 text-white/20 mb-2" />
+                            <p className="text-sm text-white/40">Tidak ada akun yang cocok.</p>
+                          </div>
+                        );
+
+                        // Group by date label
+                        const groups: Record<string, typeof filtered> = {};
+                        filtered.forEach(rec => {
+                          const d = new Date(rec.savedAt);
+                          const today = new Date();
+                          const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+                          let label: string;
+                          if (d.toDateString() === today.toDateString()) label = 'Hari ini';
+                          else if (d.toDateString() === yesterday.toDateString()) label = 'Kemarin';
+                          else label = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                          if (!groups[label]) groups[label] = [];
+                          groups[label].push(rec);
+                        });
+
+                        return (
+                          <div className="flex flex-col gap-3">
+                            {Object.entries(groups).map(([label, recs]) => (
+                              <div key={label}>
+                                <p className="text-[10px] font-semibold uppercase tracking-widest text-white/30 px-2 mb-1.5">
+                                  {label}
+                                </p>
+                                <div className="flex flex-col gap-1">
+                                  {recs.map(rec => {
+                                    const isCurrent = rec.email === address;
+                                    const isRecovering = recovering === rec.email;
+                                    return (
+                                      <div key={rec.email}
+                                        className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all ${
+                                          isCurrent
+                                            ? 'bg-teal-500/20 border-teal-400/30'
+                                            : 'bg-white/5 border-white/8 hover:bg-white/12'
+                                        }`}>
+                                        <div className="min-w-0 flex-1">
+                                          <p className={`text-sm font-mono truncate ${isCurrent ? 'text-teal-300' : 'text-white/80'}`}>
+                                            {rec.email}
+                                          </p>
+                                          <p className="text-[10px] text-white/30 mt-0.5">
+                                            {isCurrent
+                                              ? '● Sedang aktif'
+                                              : new Date(rec.savedAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                                            }
+                                          </p>
+                                        </div>
+                                        {!isCurrent && (
+                                          <Button size="sm" variant="ghost" disabled={!!recovering}
+                                            onClick={() => handleRecover(rec)}
+                                            className="shrink-0 h-8 px-2.5 text-xs text-white/60 border border-white/15
+                                                       bg-white/8 hover:bg-purple-500/30 hover:text-white hover:border-purple-400/40">
+                                            {isRecovering
+                                              ? <RefreshCw className="h-3 w-3 animate-spin" />
+                                              : <><Undo2 className="h-3 w-3 mr-1" />Pulihkan</>
+                                            }
+                                          </Button>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
                                 </div>
-                                {!isCurrent && (
-                                  <Button size="sm" variant="ghost" disabled={!!recovering}
-                                    onClick={() => handleRecover(rec)}
-                                    className="shrink-0 h-8 px-2.5 text-xs text-white/70 border border-white/20 bg-white/10 hover:bg-white/20 hover:text-white">
-                                    {isRecovering
-                                      ? <RefreshCw className="h-3 w-3 animate-spin" />
-                                      : <><Undo2 className="h-3 w-3 mr-1" />Pulihkan</>
-                                    }
-                                  </Button>
-                                )}
                               </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </motion.div>
                   )}
 
