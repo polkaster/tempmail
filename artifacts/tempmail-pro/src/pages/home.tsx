@@ -526,11 +526,32 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 py-4 text-center shrink-0 border-t border-white/10"
+      <footer className="relative z-10 py-3 shrink-0 border-t border-white/10"
         style={{ background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(8px)' }}>
-        <p className="text-xs text-white/35 font-medium">
-          TempMail By Polkaster &bull; Powered by mail.tm API &bull; Data tersimpan di browser
-        </p>
+        <div className="flex flex-col items-center gap-2">
+          <p className="text-xs text-white/35 font-medium">
+            TempMail By Polkaster &bull; Powered by mail.tm API &bull; Data tersimpan di browser
+          </p>
+          <div className="flex items-center gap-3">
+            <a href="https://www.facebook.com/derby.ar.7" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-blue-400 transition-colors duration-200">
+              {/* Facebook icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987H7.898V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
+              </svg>
+              Facebook
+            </a>
+            <span className="text-white/20 text-xs">•</span>
+            <a href="https://x.com/polkaster300" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-sky-400 transition-colors duration-200">
+              {/* X / Twitter icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.73-8.835L1.254 2.25H8.08l4.253 5.622L18.244 2.25zm-1.161 17.52h1.833L7.084 4.126H5.117L17.083 19.77z"/>
+              </svg>
+              Twitter / X
+            </a>
+          </div>
+        </div>
       </footer>
     </div>
   );
