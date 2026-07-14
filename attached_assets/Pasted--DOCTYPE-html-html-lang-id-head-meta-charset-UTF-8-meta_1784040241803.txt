@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TempMail Pro - Pemulihan & Database</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg-color: #f3f4f6;
+            --card-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border-color: #e5e7eb;
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            background-color: var(--card-bg);
+            padding: 1rem 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .status-badge {
+            font-size: 0.875rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            background-color: #d1fae5;
+            color: #065f46;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--success);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        /* Main Layout */
+        main {
+            flex: 1;
+            max-width: 1200px;
+            margin: 2rem auto;
+            width: 95%;
+            display: grid;
+            grid-template-columns: 1fr 1.5fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            main {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Card Styles */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-subtitle {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Input Area */
+        .email-display {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .email-box {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 1rem;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .email-box:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--bg-color);
+        }
+
+        .btn-danger {
+            background-color: #fee2e2;
+            color: #b91c1c;
+        }
+        .btn-danger:hover {
+            background-color: #fecaca;
+        }
+
+        /* Search Bar */
+        .search-container {
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.6rem 1rem;
+            padding-left: 2.2rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.8rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+        }
+
+        /* Inbox Area */
+        .inbox-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .refresh-btn {
+            font-size: 0.875rem;
+            color: var(--primary);
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .refresh-btn:hover {
+            text-decoration: underline;
+        }
+
+        .email-list {
+            flex: 1;
+            overflow-y: auto;
+            max-height: 600px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        /* Email Item */
+        .email-item {
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+            position: relative;
+        }
+
+        .email-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            border-color: var(--primary);
+        }
+
+        .email-item.active {
+            border-color: var(--primary);
+            background-color: #eef2ff;
+        }
+
+        .email-sender {
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .email-subject {
+            color: var(--text-main);
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .email-preview {
+            color: var(--text-muted);
+            font-size: 0.875rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .email-time {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        /* Email View */
+        .email-view-container {
+            flex: 1;
+            display: none; /* Hidden by default */
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .email-view-container.active {
+            display: flex;
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        .mailbox-content {
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .content-header {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .content-subject {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .content-meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .content-body {
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        .attachment-area {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .attachment-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .attachment-btn:hover {
+            background-color: #e5e7eb;
+        }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            z-index: 1000;
+        }
+
+        .toast {
+            background-color: var(--text-main);
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            font-size: 0.9rem;
+            animation: slideIn 0.3s ease-out;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toast.success { background-color: var(--success); }
+        .toast.error { background-color: var(--error); }
+        .toast.warning { background-color: var(--warning); color: #fff; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Expiry Badge */
+        .expiry-badge {
+            font-size: 0.7rem;
+            background: #e0e7ff;
+            color: #3730a3;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 8px;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            📧 TempMail Pro
+        </div>
+        <div class="header-controls">
+            <div class="status-badge">
+                <div class="status-dot"></div>
+                <span id="refresh-status">Live</span>
+            </div>
+            <button class="btn btn-outline" onclick="deleteAllData()">🗑️ Hapus Semua Data</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- Kolom Kiri: Kontrol & Inbox List -->
+        <section class="card">
+            <div class="card-header">
+                <h2 class="card-title">Alamat Email</h2>
+                <p class="card-subtitle">Email ini valid hingga <strong>14 hari</strong> ke depan.</p>
+            </div>
+
+            <div class="email-display">
+                <input type="text" id="email-address" class="email-box" readonly value="Loading...">
+                <button class="btn btn-outline" onclick="copyEmail()" title="Salin Email">
+                    📋
+                </button>
+            </div>
+
+            <div class="search-container">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="search-input" class="search-input" placeholder="Cari email berdasarkan pengirim atau subjek..." onkeyup="filterEmails()">
+            </div>
+
+            <div class="inbox-header">
+                <h3 class="card-title" style="font-size: 1rem;">Pesan Masuk</h3>
+                <button class="refresh-btn" onclick="refreshInbox()">
+                    🔄 Segarkan
+                </button>
+            </div>
+
+            <!-- Daftar Email (List View) -->
+            <div id="email-list" class="email-list">
+                <!-- Email items will be injected here -->
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>Belum ada email masuk.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Kolom Kanan: Detail Email -->
+        <section class="card">
+            <div id="email-view-container" class="email-view-container">
+                <div class="content-header">
+                    <h2 id="view-subject" class="content-subject">Subject</h2>
+                    <div class="content-meta">
+                        <span id="view-sender">Dari: Sender</span>
+                        <span id="view-date">Tanggal</span>
+                    </div>
+                    <div style="margin-top: 5px;">
+                        <span class="expiry-badge">⚠️ Valid hingga 14 Hari</span>
+                    </div>
+                </div>
+                <div id="view-body" class="content-body">
+                    <!-- Email Body -->
+                </div>
+                <div id="view-attachment-area" class="attachment-area" style="display: none;">
+                    <p><strong>Lampiran:</strong></p>
+                    <a id="download-link" href="#" class="attachment-btn" download>
+                        ⬇️ Unduh Lampiran
+                    </a>
+                </div>
+            </div>
+
+            <!-- Tampilan Kosong (Default) -->
+            <div id="empty-view" class="empty-state">
+                <div class="empty-icon">✉️</div>
+                <p>Pilih email untuk membaca detailnya.</p>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        Dibuat dengan menggunakan API 1secmail.com &bull; Data tersimpan di browser (LocalStorage)
+    </footer>
+
+    <!-- Container untuk Notifikasi -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+        // --- Konfigurasi & State ---
+        const EXPIRY_DAYS = 14;
+        let currentEmail = '';
+        let refreshInterval = null;
+        let storedEmails = {}; // Objek untuk menyimpan email per alamat email
+
+        // --- Inisialisasi ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            generateNewEmail();
+            startAutoRefresh();
+        });
+
+        // --- Database Lokal (LocalStorage) ---
+        function loadData() {
+            const savedData = localStorage.getItem('tempMailData');
+            if (savedData) {
+                storedEmails = JSON.parse(savedData);
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('tempMailData', JSON.stringify(storedEmails));
+        }
+
+        function deleteAllData() {
+            if(confirm("Apakah Anda yakin ingin menghapus semua riwayat email? Data tidak dapat dikembalikan.")) {
+                localStorage.removeItem('tempMailData');
+                storedEmails = {};
+                showToast("Semua data berhasil dihapus.", "warning");
+                renderEmailList([]); // Clear view
+            }
+        }
+
+        // --- Fungsi Utama ---
+
+        function generateNewEmail() {
+            const domain = '1secmail.com';
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let username = '';
+            
+            for (let i = 0; i < 6; i++) {
+                username += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            
+            currentEmail = `${username}@${domain}`;
+            
+            // Update UI
+            document.getElementById('email-address').value = currentEmail;
+            
+            // Jika email ini sudah ada di database, tampilkan pesan info
+            if (storedEmails[currentEmail]) {
+                showToast(`Menggunakan email lama (${currentEmail})`, "warning");
+            }
+
+            // Reset Inbox View
+            document.getElementById('email-list').innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <p>Menunggu email masuk...</p>
+                </div>
+            `;
+            document.getElementById('email-view-container').classList.remove('active');
+            document.getElementById('empty-view').style.display = 'flex';
+            
+            // Trigger cek email langsung
+            checkMail();
+        }
+
+        // 2. Fungsi Cek Inbox (API)
+        async function checkMail() {
+            if (!currentEmail) return;
+
+            // Update status badge
+            const statusText = document.getElementById('refresh-status');
+            statusText.innerText = "Checking...";
+
+            try {
+                const response = await fetch(`https://www.1secmail.com/api/v1/?action=getMessages&login=${currentEmail.split('@')[0]}&domain=${currentEmail.split('@')[1]}`);
+                
+                if (!response.ok) throw new Error("Gagal mengambil data");
+
+                const data = await response.json();
+                
+                // Simpan ke Database Lokal
+                if (data && Array.isArray(data)) {
+                    storedEmails[currentEmail] = data;
+                    saveData();
+                }
+
+                renderEmailList(data);
+                
+            } catch (error) {
+                console.error("Error checking mail:", error);
+                // Jika error koneksi, coba render dari data lokal
+                if (storedEmails[currentEmail]) {
+                    renderEmailList(storedEmails[currentEmail]);
+                    showToast("Menggunakan data offline (terputus)", "warning");
+                } else {
+                    showToast("Gagal memeriksa email.", "error");
+                }
+            } finally {
+                statusText.innerText = "Live";
+            }
+        }
+
+        // 3. Render Daftar Email
+        function renderEmailList(emails) {
+            const listContainer = document.getElementById('email-list');
+            
+            // Filter berdasarkan input pencarian
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            
+            // Filter array dan simpan ke variabel sementara
+            const filteredEmails = emails.filter(email => {
+                const sender = (email.from || '').toLowerCase();
+                const subject = (email.subject || '').toLowerCase();
+                return sender.includes(searchTerm) || subject.includes(searchTerm);
+            });
+
+            // Jika kosong, set pesan default
+            if (!filteredEmails || filteredEmails.length === 0) {
+                if (listContainer.querySelector('.empty-state') === null) {
+                     listContainer.innerHTML = `
+                        <div class="empty-state" style="height: 100px;">
+                            <p>0 email ditemukan.</p>
+                        </div>
+                    `;
+                }
+                return;
+            }
+
+            listContainer.innerHTML = '';
+
+            filteredEmails.forEach(email => {
+                const date = new Date(email.date);
+                const dateStr = date.toLocaleString('id-ID', { 
+                    day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' 
+                });
+
+                const item = document.createElement('div');
+                item.className = 'email-item';
+                item.onclick = () => openEmail(email);
+
+                item.innerHTML = `
+                    <div class="email-sender">
+                        <span>${escapeHtml(email.from)}</span>
+                        <span class="email-time">${dateStr}</span>
+                    </div>
+                    <div class="email-subject">${escapeHtml(email.subject)}</div>
+                    <div class="email-preview">${escapeHtml(email.text || email.html || 'Tidak ada isi teks')}</div>
+                `;
+                listContainer.appendChild(item);
+            });
+        }
+
+        // 4. Buka Detail Email (Pemulihan dari LocalStorage)
+        function openEmail(email) {
+            // Set UI View
+            document.getElementById('empty-view').style.display = 'none';
+            const viewContainer = document.getElementById('email-view-container');
+            viewContainer.classList.add('active');
+
+            // Set Content
+            document.getElementById('view-subject').textContent = email.subject;
+            document.getElementById('view-sender').textContent = `Dari: ${email.from}`;
+            
+            const date = new Date(email.date);
+            document.getElementById('view-date').textContent = date.toLocaleString('id-ID');
+
+            // Set Body
+            const bodyDiv = document.getElementById('view-body');
+            
+            if (email.html) {
+                bodyDiv.innerHTML = email.html;
+            } else if (email.text) {
+                bodyDiv.textContent = email.text;
+            } else {
+                bodyDiv.textContent = "Tidak ada isi pesan.";
+            }
+
+            // Handle Attachment
+            const attachArea = document.getElementById('view-attachment-area');
+            const downloadLink = document.getElementById('download-link');
+
+            if (email.attachments && email.attachments.length > 0) {
+                attachArea.style.display = 'block';
+                const att = email.attachments[0];
+                const attUrl = `https://www.1secmail.com/api/v1/?action=download&login=${currentEmail.split('@')[0]}&domain=${currentEmail.split('@')[1]}&id=${email.id}&file=${att.id}`;
+                
+                downloadLink.href = attUrl;
+                downloadLink.download = att.name;
+                downloadLink.innerHTML = `⬇️ Unduh ${escapeHtml(att.name)}`;
+            } else {
+                attachArea.style.display = 'none';
+            }
+
+            // Highlight item active
+            document.querySelectorAll('.email-item').forEach(el => el.classList.remove('active'));
+            item.classList.add('active'); // Note: item is local scope here, ideally use ID
+        }
+
+        // --- Utilitas ---
+
+        function copyEmail() {
+            const copyText = document.getElementById("email-address");
+            copyText.select();
+            copyText.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(copyText.value).then(() => {
+                showToast("Email disalin!", "success");
+            });
+        }
+
+        function refreshInbox() {
+            checkMail();
+        }
+
+        function startAutoRefresh() {
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(checkMail, 5000);
+        }
+
+        function filterEmails() {
+            // Ambil email terbaru dari database terlebih dahulu
+            let allEmails = storedEmails[currentEmail] || [];
+            renderEmailList(allEmails);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            
+            let icon = type === 'success' ? '✅' : (type === 'warning' ? '⚠️' : '❌');
+            toast.innerHTML = `<span>${icon}</span> ${message}`;
+            
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

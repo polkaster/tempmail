@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "TempMail Pro"
+version = "1.0.0"
+id = "artifacts/tempmail-pro"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23935
+
+[services.development]
+run = "pnpm --filter @workspace/tempmail-pro run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tempmail-pro", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tempmail-pro/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23935"
+BASE_PATH = "/"
