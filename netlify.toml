@@ -1,0 +1,20 @@
+[build]
+  command   = "pnpm --filter @workspace/tempmail-pro run build"
+  publish   = "artifacts/tempmail-pro/dist/public"
+  functions = "netlify/functions"
+
+[build.environment]
+  BASE_PATH = "/"
+  NODE_VERSION = "20"
+
+# Proxy semua /api/* ke Netlify Function
+[[redirects]]
+  from   = "/api/*"
+  to     = "/.netlify/functions/api"
+  status = 200
+
+# SPA fallback — semua route dikembalikan ke index.html
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
