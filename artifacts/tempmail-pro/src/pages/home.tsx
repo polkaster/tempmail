@@ -550,6 +550,15 @@ export default function Home() {
               </svg>
               Twitter / X
             </a>
+            <span className="text-white/20 text-xs">•</span>
+            <a href="https://saweria.co/polkaster" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-yellow-400 transition-colors duration-200">
+              {/* Coffee / donate icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M2 21h18v-2H2v2zm2-3h14l1-9H3l1 9zm13-11V5a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v2H3v2h2.09L6 15h12l.91-7H21V7h-4zm-2 0H9V6h6v1z"/>
+              </svg>
+              ☕ Donate buat ngopi
+            </a>
           </div>
         </div>
       </footer>
