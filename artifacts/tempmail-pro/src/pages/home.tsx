@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { useTempMail, EmailDetail } from '@/hooks/use-tempmail';
+import { useTempMail, EmailDetail, AccountRecord } from '@/hooks/use-tempmail';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -24,96 +22,110 @@ import {
   Mail,
   Paperclip,
   Download,
-  Search,
   Inbox,
   ShieldCheck,
   Clock,
   AlertTriangle,
   RotateCcw,
+  History,
+  Undo2,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 // @ts-ignore
 import bgImage from '@assets/xxxx_1784040995668.jpg';
 
+// ── tiny glass-card wrapper ────────────────────────────────────────────────
+function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  return (
+    <div
+      className={`rounded-2xl border border-white/20 shadow-xl overflow-hidden ${className}`}
+      style={{ background: 'rgba(255,255,255,0.08)', backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)' }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ── relative time helper ───────────────────────────────────────────────────
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return 'baru saja';
+  if (m < 60) return `${m} menit lalu`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h} jam lalu`;
+  return `${Math.floor(h / 24)} hari lalu`;
+}
+
 export default function Home() {
   const {
-    address,
-    emails,
-    isLoading,
-    isPolling,
-    refresh,
-    clearData,
-    fetchEmailDetail,
-    getAttachmentUrl,
+    address, emails, isLoading, isPolling, history,
+    refresh, changeEmail, recoverAccount, fetchEmailDetail, getAttachmentUrl,
   } = useTempMail();
 
   const { toast } = useToast();
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
-  const [emailDetail, setEmailDetail] = useState<EmailDetail | null>(null);
-  const [isDetailLoading, setIsDetailLoading] = useState(false);
-
-  const filteredEmails = emails.filter(
-    (email) =>
-      email.subject?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      email.from?.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+  const [showRecovery, setShowRecovery]     = useState(false);
+  const [selectedId,   setSelectedId]       = useState<string | null>(null);
+  const [emailDetail,  setEmailDetail]      = useState<EmailDetail | null>(null);
+  const [isDetailLoad, setIsDetailLoad]     = useState(false);
+  const [recovering,   setRecovering]       = useState<string | null>(null);
 
   const handleCopy = () => {
-    if (address) {
-      navigator.clipboard.writeText(address);
-      toast({ title: 'Email disalin!', description: 'Alamat email berhasil disalin ke clipboard.' });
-    }
+    if (!address) return;
+    navigator.clipboard.writeText(address);
+    toast({ title: 'Email disalin!', description: 'Alamat email berhasil disalin ke clipboard.' });
   };
 
-  const handleSelectEmail = async (id: string) => {
-    setSelectedEmailId(id);
-    setIsDetailLoading(true);
-    try {
-      const detail = await fetchEmailDetail(id);
-      setEmailDetail(detail);
-    } catch {
-      // handled in hook
-    } finally {
-      setIsDetailLoading(false);
-    }
+  const handleSelect = async (id: string) => {
+    setSelectedId(id);
+    setIsDetailLoad(true);
+    try { setEmailDetail(await fetchEmailDetail(id)); }
+    catch { /* handled in hook */ }
+    finally { setIsDetailLoad(false); }
+  };
+
+  const handleRecover = async (record: AccountRecord) => {
+    setRecovering(record.email);
+    setSelectedId(null);
+    setEmailDetail(null);
+    try { await recoverAccount(record); }
+    finally { setRecovering(null); setShowRecovery(false); }
   };
 
   const handleChangeEmail = () => {
-    clearData();
-    setSelectedEmailId(null);
+    changeEmail();
+    setSelectedId(null);
     setEmailDetail(null);
   };
 
+  // ── loading screen ───────────────────────────────────────────────────────
   if (isLoading) {
     return (
-      <div
-        className="min-h-screen w-full flex items-center justify-center"
-        style={{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-      >
-        <div className="bg-white/20 backdrop-blur-md rounded-2xl p-8 flex flex-col items-center gap-4">
+      <div className="min-h-screen w-full flex items-center justify-center"
+        style={{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center' }}>
+        <div className="fixed inset-0 bg-black/50" />
+        <GlassCard className="relative z-10 p-10 flex flex-col items-center gap-4">
           <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: 'linear' }}>
             <RefreshCw className="h-8 w-8 text-white" />
           </motion.div>
-          <p className="text-white font-semibold text-sm">Membuat kotak masuk Anda...</p>
-        </div>
+          <p className="text-white font-semibold text-sm tracking-wide">Membuat kotak masuk…</p>
+        </GlassCard>
       </div>
     );
   }
 
+  // ── main layout ──────────────────────────────────────────────────────────
   return (
-    <div
-      className="min-h-[100dvh] w-full flex flex-col font-sans"
-      style={{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}
-    >
-      {/* Dark overlay for readability */}
-      <div className="fixed inset-0 bg-black/40 pointer-events-none z-0" />
+    <div className="min-h-[100dvh] w-full flex flex-col font-sans relative"
+      style={{ backgroundImage: `url(${bgImage})`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' }}>
 
-      {/* Header */}
-      <header className="sticky top-0 z-30 w-full bg-black/30 backdrop-blur-md border-b border-white/10 shadow-sm">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-center relative">
-          {/* Centered title */}
+      {/* global overlay */}
+      <div className="fixed inset-0 bg-black/45 pointer-events-none z-0" />
+
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 w-full border-b border-white/10 shadow-sm"
+        style={{ background: 'rgba(0,0,0,0.25)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}>
+        <div className="container mx-auto px-4 h-16 flex items-center justify-center">
           <div className="flex flex-col items-center">
             <h1 className="text-xl font-bold tracking-tight text-white drop-shadow flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-emerald-400" />
@@ -121,64 +133,58 @@ export default function Home() {
             </h1>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
               </span>
-              <span className="text-[10px] font-medium text-white/70 uppercase tracking-wider">Live</span>
+              <span className="text-[10px] font-medium text-white/60 uppercase tracking-wider">Live</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* ── Main ──────────────────────────────────────────────────────────── */}
       <main className="relative z-10 flex-1 container mx-auto px-4 py-6 max-w-7xl flex flex-col md:flex-row gap-6">
 
-        {/* Left Panel */}
+        {/* Left panel */}
         <div className="w-full md:w-[400px] lg:w-[450px] flex flex-col gap-4 shrink-0">
 
-          {/* Email Address Card */}
-          <Card className="border-white/20 shadow-lg bg-white/80 backdrop-blur-md overflow-hidden">
-            <div className="h-1.5 w-full bg-gradient-to-r from-emerald-400 to-teal-500"></div>
-            <CardContent className="p-5">
-              <h2 className="text-sm font-semibold text-slate-500 mb-1 uppercase tracking-wider">Alamat Email</h2>
+          {/* Email address card */}
+          <GlassCard>
+            <div className="h-1 w-full bg-gradient-to-r from-emerald-400 to-teal-500" />
+            <div className="p-5">
+              <p className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">Alamat Email</p>
 
-              {/* Email input + copy button */}
-              <div className="flex items-center gap-2 mt-2">
-                <div className="relative flex-1">
-                  <Input
-                    readOnly
-                    value={address}
-                    className="font-mono text-base bg-white/70 border-slate-200 pr-12 focus-visible:ring-1 focus-visible:ring-teal-400 h-12"
-                  />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="absolute right-1 top-1 h-10 w-10 text-slate-400 hover:text-teal-600 hover:bg-teal-50"
-                        onClick={handleCopy}
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Salin Email</TooltipContent>
-                  </Tooltip>
-                </div>
+              <div className="relative">
+                <Input
+                  readOnly value={address}
+                  className="font-mono text-sm md:text-base pr-12 h-12
+                             bg-white/10 border-white/20 text-white
+                             placeholder:text-white/40 focus-visible:ring-1 focus-visible:ring-teal-400"
+                />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button size="icon" variant="ghost"
+                      className="absolute right-1 top-1 h-10 w-10 text-white/50 hover:text-teal-300 hover:bg-white/10"
+                      onClick={handleCopy}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Salin Email</TooltipContent>
+                </Tooltip>
               </div>
 
-              <p className="text-xs text-slate-500 mt-2 flex items-center gap-1.5">
+              <p className="text-xs text-white/40 mt-2 flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
-                <span>Email ini valid hingga <strong className="text-slate-700">14 hari</strong> ke depan.</span>
+                Email ini valid hingga <strong className="text-white/70">14 hari</strong> ke depan.
               </p>
 
-              {/* Change email button — placed right below the address */}
-              <div className="mt-3 pt-3 border-t border-slate-100">
+              {/* Change email button */}
+              <div className="mt-3 pt-3 border-t border-white/10">
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full h-9 text-sm border-teal-200 text-teal-700 hover:bg-teal-50 hover:text-teal-800 hover:border-teal-300"
-                    >
+                    <Button variant="outline" className="w-full h-9 text-sm
+                      border-white/20 text-white/80 bg-white/10
+                      hover:bg-white/20 hover:text-white hover:border-white/30">
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Ubah Alamat Email
                     </Button>
@@ -187,205 +193,259 @@ export default function Home() {
                     <AlertDialogHeader>
                       <AlertDialogTitle>Ubah Alamat Email</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Alamat email baru akan dibuat dan semua pesan saat ini akan terhapus. Lanjutkan?
+                        Alamat email baru akan dibuat. Email lama tetap tersimpan di riwayat dan bisa dipulihkan kapan saja.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Batal</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleChangeEmail}
-                        className="bg-teal-600 hover:bg-teal-700 text-white"
-                      >
+                      <AlertDialogAction onClick={handleChangeEmail}
+                        className="bg-teal-600 hover:bg-teal-700 text-white">
                         Ubah
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </GlassCard>
 
-          {/* Inbox Container */}
-          <Card className="flex-1 flex flex-col border-white/20 shadow-lg bg-white/80 backdrop-blur-md overflow-hidden min-h-[400px]">
-            <div className="p-4 border-b border-slate-100 flex flex-col gap-3 shrink-0">
+          {/* Inbox + Recovery card */}
+          <GlassCard className="flex-1 flex flex-col min-h-[400px]">
+
+            {/* Card header: tabs */}
+            <div className="p-4 border-b border-white/10 shrink-0">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-slate-700 flex items-center gap-2">
-                  <Inbox className="h-4 w-4 text-teal-600" />
-                  Pesan Masuk
-                  <Badge variant="secondary" className="ml-1 rounded-full px-2 py-0.5 text-xs font-normal">
-                    {emails.length}
-                  </Badge>
-                </h3>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={refresh}
-                  className="h-8 px-2 text-slate-500 hover:text-teal-600 hover:bg-teal-50"
-                >
-                  <RefreshCw className={`h-4 w-4 mr-1.5 ${isPolling ? 'animate-spin' : ''}`} />
-                  Segarkan
-                </Button>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <Input
-                  placeholder="Cari email berdasarkan pengirim atau subjek..."
-                  className="pl-9 h-9 bg-white/70 border-slate-200 focus-visible:ring-1 focus-visible:ring-teal-400 text-sm"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => setShowRecovery(false)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      !showRecovery
+                        ? 'bg-white/20 text-white'
+                        : 'text-white/50 hover:text-white/80 hover:bg-white/10'
+                    }`}>
+                    <Inbox className="h-3.5 w-3.5" />
+                    Pesan Masuk
+                    {emails.length > 0 && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full bg-teal-500/80 text-white text-[10px] font-bold leading-none">
+                        {emails.length}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowRecovery(true)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                      showRecovery
+                        ? 'bg-white/20 text-white'
+                        : 'text-white/50 hover:text-white/80 hover:bg-white/10'
+                    }`}>
+                    <History className="h-3.5 w-3.5" />
+                    Pemulihan Akun
+                    {history.length > 0 && (
+                      <span className="ml-1 px-1.5 py-0.5 rounded-full bg-purple-500/70 text-white text-[10px] font-bold leading-none">
+                        {history.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {!showRecovery && (
+                  <Button size="sm" variant="ghost" onClick={refresh}
+                    className="h-8 px-2 text-white/50 hover:text-teal-300 hover:bg-white/10">
+                    <RefreshCw className={`h-4 w-4 ${isPolling ? 'animate-spin' : ''}`} />
+                  </Button>
+                )}
               </div>
             </div>
 
             <ScrollArea className="flex-1">
               <div className="p-2">
-                <AnimatePresence>
-                  {filteredEmails.length === 0 ? (
-                    <motion.div
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      className="flex flex-col items-center justify-center h-48 text-center px-4"
-                    >
-                      <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
-                        <Mail className="h-6 w-6 text-slate-300" />
-                      </div>
-                      <p className="text-sm font-medium text-slate-500">
-                        {searchQuery ? 'Tidak ada email yang cocok dengan pencarian.' : 'Belum ada email masuk.'}
-                      </p>
-                      {!searchQuery && (
-                        <p className="text-xs text-slate-400 mt-1">Menunggu pesan masuk...</p>
+                <AnimatePresence mode="wait">
+
+                  {/* ── Inbox panel ──────────────────────────────────────── */}
+                  {!showRecovery && (
+                    <motion.div key="inbox" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      {emails.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-52 text-center px-4">
+                          <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center mb-3">
+                            <Mail className="h-6 w-6 text-white/30" />
+                          </div>
+                          <p className="text-sm font-medium text-white/50">Belum ada email masuk.</p>
+                          <p className="text-xs text-white/30 mt-1">Menunggu pesan masuk…</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1">
+                          {emails.map((email, i) => (
+                            <motion.button key={email.id}
+                              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                              transition={{ delay: i * 0.04 }}
+                              onClick={() => handleSelect(email.id)}
+                              className={`w-full text-left p-3 rounded-xl transition-all border ${
+                                selectedId === email.id
+                                  ? 'bg-teal-500/25 border-teal-400/50'
+                                  : 'bg-white/5 border-transparent hover:bg-white/15 hover:border-white/20'
+                              }`}>
+                              <div className="flex justify-between items-start gap-2 mb-0.5">
+                                <span className={`font-semibold truncate text-sm ${selectedId === email.id ? 'text-teal-300' : 'text-white/90'}`}>
+                                  {email.from}
+                                </span>
+                                <span className="text-[10px] text-white/40 whitespace-nowrap shrink-0">
+                                  {new Date(email.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                              <p className="text-sm text-white/80 truncate font-medium mb-0.5">
+                                {email.subject || '(Tanpa Subjek)'}
+                              </p>
+                              <p className="text-xs text-white/40 truncate">
+                                {email.intro || 'Tidak ada pratinjau'}
+                              </p>
+                            </motion.button>
+                          ))}
+                        </div>
                       )}
                     </motion.div>
-                  ) : (
-                    <div className="flex flex-col gap-1">
-                      {filteredEmails.map((email, index) => (
-                        <motion.button
-                          key={email.id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: index * 0.05 }}
-                          onClick={() => handleSelectEmail(email.id)}
-                          className={`w-full text-left p-3 rounded-lg transition-all border ${
-                            selectedEmailId === email.id
-                              ? 'bg-teal-50 border-teal-300 shadow-sm'
-                              : 'bg-transparent border-transparent hover:bg-slate-50 hover:border-slate-200'
-                          }`}
-                        >
-                          <div className="flex justify-between items-start mb-1 gap-2">
-                            <span className={`font-medium truncate text-sm ${selectedEmailId === email.id ? 'text-teal-700' : 'text-slate-700'}`}>
-                              {email.from}
-                            </span>
-                            <span className="text-[10px] text-slate-400 whitespace-nowrap shrink-0 mt-0.5">
-                              {new Date(email.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          <p className="text-sm font-medium text-slate-700 truncate mb-1">
-                            {email.subject || '(Tanpa Subjek)'}
-                          </p>
-                          <p className="text-xs text-slate-400 truncate">
-                            {email.intro || 'Tidak ada pratinjau tersedia.'}
-                          </p>
-                        </motion.button>
-                      ))}
-                    </div>
                   )}
+
+                  {/* ── Account Recovery panel ───────────────────────────── */}
+                  {showRecovery && (
+                    <motion.div key="recovery" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                      {history.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-52 text-center px-4">
+                          <div className="h-12 w-12 rounded-full bg-white/10 flex items-center justify-center mb-3">
+                            <History className="h-6 w-6 text-white/30" />
+                          </div>
+                          <p className="text-sm font-medium text-white/50">Belum ada riwayat akun.</p>
+                          <p className="text-xs text-white/30 mt-1">Akun yang pernah digunakan akan muncul di sini.</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-1.5 pt-1">
+                          <p className="text-xs text-white/40 px-2 pb-1">
+                            Pilih akun lama untuk memulihkannya dan mulai menerima email kembali.
+                          </p>
+                          {history.map((rec) => {
+                            const isCurrent = rec.email === address;
+                            const isRecovering = recovering === rec.email;
+                            return (
+                              <div key={rec.email}
+                                className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all ${
+                                  isCurrent
+                                    ? 'bg-teal-500/20 border-teal-400/40'
+                                    : 'bg-white/5 border-white/10 hover:bg-white/10'
+                                }`}>
+                                <div className="min-w-0 flex-1">
+                                  <p className={`text-sm font-mono truncate font-medium ${isCurrent ? 'text-teal-300' : 'text-white/85'}`}>
+                                    {rec.email}
+                                  </p>
+                                  <p className="text-[10px] text-white/35 mt-0.5">
+                                    {isCurrent ? '● Sedang aktif' : `Disimpan ${relativeTime(rec.savedAt)}`}
+                                  </p>
+                                </div>
+                                {!isCurrent && (
+                                  <Button size="sm" variant="ghost" disabled={!!recovering}
+                                    onClick={() => handleRecover(rec)}
+                                    className="shrink-0 h-8 px-2.5 text-xs text-white/70 border border-white/20 bg-white/10 hover:bg-white/20 hover:text-white">
+                                    {isRecovering
+                                      ? <RefreshCw className="h-3 w-3 animate-spin" />
+                                      : <><Undo2 className="h-3 w-3 mr-1" />Pulihkan</>
+                                    }
+                                  </Button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+
                 </AnimatePresence>
               </div>
             </ScrollArea>
-          </Card>
+          </GlassCard>
         </div>
 
-        {/* Right Panel */}
-        <Card className="flex-1 flex flex-col border-white/20 shadow-lg bg-white/80 backdrop-blur-md overflow-hidden min-h-[500px]">
-          {selectedEmailId ? (
-            isDetailLoading ? (
-              <div className="flex-1 flex flex-col items-center justify-center">
-                <RefreshCw className="h-6 w-6 text-teal-500 animate-spin mb-4" />
-                <p className="text-sm text-slate-500">Memuat pesan...</p>
+        {/* Right panel — email reader */}
+        <GlassCard className="flex-1 flex flex-col min-h-[500px]">
+          {selectedId ? (
+            isDetailLoad ? (
+              <div className="flex-1 flex flex-col items-center justify-center gap-3">
+                <RefreshCw className="h-6 w-6 text-teal-400 animate-spin" />
+                <p className="text-sm text-white/50">Memuat pesan…</p>
               </div>
             ) : emailDetail ? (
               <div className="flex flex-col h-full">
-                {/* Email Header */}
-                <div className="p-6 border-b border-slate-100 shrink-0 bg-slate-50/60">
+
+                {/* Email detail header */}
+                <div className="p-6 border-b border-white/10 shrink-0">
                   <div className="flex items-start justify-between gap-4 mb-4">
-                    <h2 className="text-xl md:text-2xl font-bold text-slate-800 leading-tight">
+                    <h2 className="text-xl md:text-2xl font-bold text-white leading-tight">
                       {emailDetail.subject || '(Tanpa Subjek)'}
                     </h2>
-                    <Badge variant="outline" className="shrink-0 bg-amber-50 text-amber-600 border-amber-200 px-3 py-1 flex items-center gap-1.5">
-                      <AlertTriangle className="h-3.5 w-3.5" /> Valid hingga 14 Hari
-                    </Badge>
+                    <span className="shrink-0 flex items-center gap-1.5 text-xs text-amber-300 border border-amber-400/30 bg-amber-400/10 rounded-full px-3 py-1">
+                      <AlertTriangle className="h-3.5 w-3.5" /> 14 Hari
+                    </span>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-teal-100 flex items-center justify-center shrink-0 border border-teal-200">
-                        <span className="text-teal-700 font-bold text-lg">
+                      <div className="h-10 w-10 rounded-full bg-teal-500/30 flex items-center justify-center shrink-0 border border-teal-400/30">
+                        <span className="text-teal-300 font-bold text-lg">
                           {emailDetail.from.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-slate-700">{emailDetail.from}</p>
-                        <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-                          Kepada:{' '}
-                          <span className="font-mono text-[11px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-700">
-                            {address}
-                          </span>
+                        <p className="text-sm font-semibold text-white/90">{emailDetail.from}</p>
+                        <p className="text-xs text-white/40 mt-0.5">
+                          Kepada: <span className="font-mono text-[11px] bg-white/10 px-1.5 py-0.5 rounded text-white/70">{address}</span>
                         </p>
                       </div>
                     </div>
-                    <div className="text-xs text-slate-400 font-medium text-right">
+                    <p className="text-xs text-white/40 text-right">
                       {new Date(emailDetail.date).toLocaleString('id-ID', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
+                        weekday: 'long', year: 'numeric', month: 'long',
+                        day: 'numeric', hour: '2-digit', minute: '2-digit',
                       })}
-                    </div>
+                    </p>
                   </div>
                 </div>
 
-                {/* Email Body */}
-                <ScrollArea className="flex-1 bg-white">
+                {/* Email body */}
+                <ScrollArea className="flex-1">
                   <div className="p-6 md:p-8">
                     {emailDetail.htmlBody ? (
                       <div
-                        className="prose prose-sm md:prose-base max-w-none prose-a:text-teal-600 prose-a:no-underline hover:prose-a:underline prose-headings:font-semibold prose-img:rounded-md"
+                        className="prose prose-sm md:prose-base max-w-none
+                          prose-headings:text-white prose-p:text-white/80
+                          prose-a:text-teal-400 prose-a:no-underline hover:prose-a:underline
+                          prose-strong:text-white prose-li:text-white/80
+                          prose-img:rounded-xl"
                         dangerouslySetInnerHTML={{ __html: emailDetail.htmlBody }}
                       />
                     ) : (
-                      <div className="whitespace-pre-wrap font-sans text-sm md:text-base text-slate-700 leading-relaxed">
+                      <p className="whitespace-pre-wrap text-sm text-white/75 leading-relaxed">
                         {emailDetail.textBody}
-                      </div>
+                      </p>
                     )}
                   </div>
                 </ScrollArea>
 
-                {/* Attachments Footer */}
-                {emailDetail.attachments && emailDetail.attachments.length > 0 && (
-                  <div className="p-4 border-t border-slate-100 bg-slate-50/60 shrink-0">
-                    <p className="text-sm font-semibold flex items-center gap-2 mb-3 text-slate-700">
-                      <Paperclip className="h-4 w-4 text-slate-400" />
+                {/* Attachments */}
+                {emailDetail.attachments.length > 0 && (
+                  <div className="p-4 border-t border-white/10 shrink-0">
+                    <p className="text-sm font-semibold text-white/60 flex items-center gap-2 mb-3">
+                      <Paperclip className="h-4 w-4" />
                       Lampiran ({emailDetail.attachments.length})
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {emailDetail.attachments.map((file, idx) => (
-                        <a
-                          key={idx}
-                          href={getAttachmentUrl(emailDetail.id, file.id)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 bg-white border border-slate-200 rounded-md px-3 py-2 text-sm hover:bg-slate-50 transition-colors group shadow-sm"
-                        >
-                          <div className="h-8 w-8 rounded bg-teal-50 flex items-center justify-center shrink-0">
-                            <Download className="h-4 w-4 text-teal-600 group-hover:scale-110 transition-transform" />
+                        <a key={idx} href={getAttachmentUrl(emailDetail.id, file.id)}
+                          target="_blank" rel="noopener noreferrer"
+                          className="flex items-center gap-2 bg-white/10 border border-white/20 rounded-xl px-3 py-2 text-sm hover:bg-white/20 transition-colors group">
+                          <div className="h-8 w-8 rounded-lg bg-teal-500/30 flex items-center justify-center shrink-0">
+                            <Download className="h-4 w-4 text-teal-300 group-hover:scale-110 transition-transform" />
                           </div>
-                          <div className="flex flex-col">
-                            <span className="font-medium max-w-[150px] truncate text-slate-700">{file.filename}</span>
-                            <span className="text-[10px] text-slate-400 uppercase">
-                              {Math.round(file.size / 1024)} KB
-                            </span>
+                          <div>
+                            <p className="font-medium max-w-[150px] truncate text-white/85">{file.filename}</p>
+                            <p className="text-[10px] text-white/40 uppercase">{Math.round(file.size / 1024)} KB</p>
                           </div>
                         </a>
                       ))}
@@ -396,22 +456,23 @@ export default function Home() {
             ) : null
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <div className="h-24 w-24 rounded-full bg-slate-100/80 flex items-center justify-center mb-6">
-                <Mail className="h-10 w-10 text-slate-300" />
+              <div className="h-24 w-24 rounded-full bg-white/10 flex items-center justify-center mb-6">
+                <Mail className="h-10 w-10 text-white/20" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-700 mb-2">Pilih email untuk membaca detailnya.</h3>
-              <p className="text-sm text-slate-400 max-w-sm">
-                Email Anda bersifat sementara dan akan otomatis dihapus oleh sistem setelah waktu validasi berakhir.
+              <h3 className="text-lg font-semibold text-white/60 mb-2">Pilih email untuk membaca detailnya.</h3>
+              <p className="text-sm text-white/30 max-w-sm">
+                Email Anda bersifat sementara dan akan otomatis dihapus setelah waktu validasi berakhir.
               </p>
             </div>
           )}
-        </Card>
+        </GlassCard>
       </main>
 
       {/* Footer */}
-      <footer className="relative z-10 py-4 text-center shrink-0 bg-black/30 backdrop-blur-md border-t border-white/10">
-        <p className="text-xs text-white/60 font-medium">
-          TempMail By Polkaster &bull; Dibuat dengan mail.tm API &bull; Data tersimpan di browser
+      <footer className="relative z-10 py-4 text-center shrink-0 border-t border-white/10"
+        style={{ background: 'rgba(0,0,0,0.2)', backdropFilter: 'blur(8px)' }}>
+        <p className="text-xs text-white/35 font-medium">
+          TempMail By Polkaster &bull; Powered by mail.tm API &bull; Data tersimpan di browser
         </p>
       </footer>
     </div>
