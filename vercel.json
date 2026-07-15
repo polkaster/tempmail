@@ -1,8 +1,11 @@
 {
+  "version": 2,
   "buildCommand": "pnpm --filter @workspace/tempmail-pro run build",
   "outputDirectory": "artifacts/tempmail-pro/dist/public",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "framework": null,
   "rewrites": [
     { "source": "/api/:path*", "destination": "/api/handler" },
-    { "source": "/(.*)",       "destination": "/index.html"  }
+    { "source": "/((?!api).*)", "destination": "/index.html" }
   ]
 }
