@@ -2,6 +2,34 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
+/* ── Adsterra ad containment ─────────────────────────────────────────────────
+   Ads injected by Adsterra scripts land directly on <body>.
+   Give #root its own stacking context so internal z-indexes win,
+   and cap any body-level fixed overlays so they never cover the UI.        */
+#root {
+  isolation: isolate;
+  position: relative;
+  z-index: 0;
+}
+
+/* Banner/iframe ads appended to <body> — push them behind the app */
+body > iframe,
+body > ins,
+body > div[id^="adsterra"],
+body > div[id^="ad-"],
+body > div[class*="adsterra"] {
+  z-index: -1 !important;
+}
+
+/* Dedicated bottom ad slots — opt back in to pointer events */
+#ad-slot-bottom {
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  text-align: center;
+}
+
+/* ── RGB title animation ─────────────────────────────────────────────────── */
 @keyframes rgb-shift {
   0%   { color: #ff4e4e; }
   16%  { color: #ff9f1c; }
