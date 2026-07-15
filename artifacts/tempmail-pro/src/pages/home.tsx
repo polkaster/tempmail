@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTempMail, EmailDetail, AccountRecord } from '@/hooks/use-tempmail';
+import CatMailAnimation from '@/components/CatMailAnimation';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,6 +72,27 @@ export default function Home() {
   const [emailDetail,    setEmailDetail]    = useState<EmailDetail | null>(null);
   const [isDetailLoad,   setIsDetailLoad]   = useState(false);
   const [recovering,     setRecovering]     = useState<string | null>(null);
+  const [showCat,        setShowCat]        = useState(false);
+  const [newEmailCount,  setNewEmailCount]  = useState(0);
+  const prevEmailCount   = useRef<number>(-1);
+  const catTimerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Detect newly arrived emails and trigger cat animation
+  useEffect(() => {
+    if (prevEmailCount.current === -1) {
+      // first load — establish baseline silently
+      prevEmailCount.current = emails.length;
+      return;
+    }
+    const diff = emails.length - prevEmailCount.current;
+    if (diff > 0) {
+      setNewEmailCount(diff);
+      setShowCat(true);
+      if (catTimerRef.current) clearTimeout(catTimerRef.current);
+      catTimerRef.current = setTimeout(() => setShowCat(false), 4200);
+    }
+    prevEmailCount.current = emails.length;
+  }, [emails.length]);
 
   const handleCopy = () => {
     if (!address) return;
@@ -123,6 +145,9 @@ export default function Home() {
 
       {/* global overlay — very light so background art shows through */}
       <div className="fixed inset-0 bg-black/10 pointer-events-none z-0" />
+
+      {/* ── Cat mail animation ─────────────────────────────────────────────── */}
+      <CatMailAnimation show={showCat} count={newEmailCount} />
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <header className="sticky top-0 z-30 w-full border-b border-white/10 shadow-sm"
