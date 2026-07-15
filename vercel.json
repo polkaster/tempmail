@@ -1,0 +1,8 @@
+{
+  "buildCommand": "pnpm --filter @workspace/tempmail-pro run build",
+  "outputDirectory": "artifacts/tempmail-pro/dist/public",
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/handler" },
+    { "source": "/(.*)",       "destination": "/index.html"  }
+  ]
+}
