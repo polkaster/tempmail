@@ -154,8 +154,21 @@ export default function Home() {
         style={{ background: 'rgba(0,0,0,0.10)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
 
-          {/* spacer kiri agar judul tetap di tengah */}
-          <div className="w-36 hidden sm:block" />
+          {/* Facebook — kiri */}
+          <div className="w-36 hidden sm:flex items-center">
+            <a href="https://www.facebook.com/derby.ar.7" target="_blank" rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold
+                         border border-blue-400/40 text-blue-300
+                         bg-blue-500/10 hover:bg-blue-500/25
+                         shadow-[0_0_12px_rgba(59,130,246,0.2)]
+                         hover:shadow-[0_0_20px_rgba(59,130,246,0.4)]
+                         transition-all duration-200">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987H7.898V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
+              </svg>
+              <span>Facebook</span>
+            </a>
+          </div>
 
           {/* Judul tengah */}
           <div className="flex flex-col items-center">
@@ -577,15 +590,6 @@ export default function Home() {
             TempMail By Polkaster &bull; Powered by mail.tm API &bull; Data tersimpan di browser
           </p>
           <div className="flex items-center gap-3">
-            <a href="https://www.facebook.com/derby.ar.7" target="_blank" rel="noopener noreferrer"
-              className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-blue-400 transition-colors duration-200">
-              {/* Facebook icon */}
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987H7.898V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"/>
-              </svg>
-              Facebook
-            </a>
-            <span className="text-white/20 text-xs">•</span>
             <a href="https://x.com/polkaster300" target="_blank" rel="noopener noreferrer"
               className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-sky-400 transition-colors duration-200">
               {/* X / Twitter icon */}
